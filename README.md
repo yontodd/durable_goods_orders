@@ -9,3 +9,5 @@ Pulls the two most recent monthly datapoints for:
 * Durable goods orders (ex. Transporation)
 * Core durable goods order (ex. defense and aircraft)
 * Core capital goods shipments
+
+Other available Census Bureau timeseries (https://api.census.gov/data/timeseries.html)
