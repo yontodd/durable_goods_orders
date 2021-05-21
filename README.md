@@ -1,6 +1,6 @@
 # durable_goods_orders
 
-Latest update - May 20, 2021
+Latest update - May 21, 2021
 * Added input for estimates
 * Added statement for headline print vs estimates and prior month
 
