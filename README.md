@@ -1,8 +1,8 @@
 # durable_goods_orders
 
-Latest update - May 21, 2021
-* Added input for estimates
-* Added statement for headline print vs estimates and prior month
+Latest update - May 29, 2021
+* Enter consensus estimates and previous (unrevised) report data into a table
+* Statement now compares headline print to both estimates and prior month, and now compares prior month to revisions
 
 Key US economic datapoints from Census Bureau's monthly Advance Report on Durable Goods Manufacturers' Shipments, Inventories, and Orders
 
