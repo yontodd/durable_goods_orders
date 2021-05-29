@@ -1,16 +1,23 @@
-# -*- coding: utf-8 -*-
-
-# Estimates:
-
-headline_est = 2.5
-durable_ex_trans_est = 1.5
-
-"""# Code - to pull key Durable Goods Orders indicators"""
-
 import requests
 import pandas as pd
 import numpy as np
 import datetime
+import dateutil
+
+# Add prior month's unrevised data and estimates:
+
+month = "2021-04-01"
+rpt_list = ["Headline durable goods orders", "Durable Goods (ex. transportation)", "Core durable goods orders (ex. defense and aircraft)", "Core capital goods shipments (which feeds into GDP"]
+prior_unrevised = [1.0, 2.3, 0.5, 1.5]
+estimate = [0.8, 0.7, np.nan, np.nan]
+
+time = pd.to_datetime(month, format ='%Y-%m')
+m = [month, month, month, month]
+df2 = pd.DataFrame(zip(m, rpt_list, prior_unrevised, estimate), columns=["time", "report", "prior_unrevised", "estimate"])
+
+df2
+
+"""# Code - to pull key Durable Goods Orders indicators"""
 
 base_url = "https://api.census.gov/data/timeseries/eits/advm3?get=data_type_code,time_slot_id,seasonally_adj,category_code,cell_value,error_data&for=us:*&time=from+{}".format("2020-03")
 response = requests.get(base_url)
@@ -22,10 +29,10 @@ df["cell_value"] = [float(str(i).replace(",","")) for i in df["cell_value"]]
 df["cell_value"] = df["cell_value"].map(lambda x: float(x))
 df["month"] = df["time"].map(lambda x: x.strftime("%B"))
 
-rpt_list = ["Headline durable goods orders", "Durable Goods (ex. transportation", "Core durable goods orders (ex. defense and aircraft)", "Core capital goods shipments (which feeds into GDP"]
+rpt_list = ["Headline durable goods orders", "Durable Goods (ex. transportation)", "Core durable goods orders (ex. defense and aircraft)", "Core capital goods shipments (which feeds into GDP"]
 data_type_code = ["MPCNO", "MPCNO", "MPCNO", "MPCVS"]
 category_code = ["MDM", "DXT", "DXD", "NXA"]
-cols = ["Report", "data_type_code","category_code"]
+cols = ["report", "data_type_code","category_code"]
 zip_list = pd.DataFrame(zip(rpt_list, data_type_code, category_code))
 zip_list.columns = cols
 
@@ -42,64 +49,54 @@ durable_goods_orders = durable_goods_orders.sort_values(by = "time", ascending=F
 durable_goods_orders = durable_goods_orders.reset_index()
 durable_goods_orders = durable_goods_orders.drop(columns= "index")
 
-headline = durable_goods_orders[durable_goods_orders["Report"] == "Headline durable goods orders"]
+headline = durable_goods_orders[durable_goods_orders["report"] == "Headline durable goods orders"]
 headline = headline.reset_index().drop(columns = "index")
 headline["m/m"] = headline["cell_value"].diff(periods = -1)
+headline["rose/fell"] = np.where(headline["cell_value"] == 0, " was unchanged", np.where(headline["cell_value"] > 0, "rose", "fell"))
+headline["vs_prior"] = np.where(headline["m/m"] > 0, "up from", np.where(headline["m/m"] == 0, "unchanged from", "down from"))
 
-ex_transport = durable_goods_orders[durable_goods_orders["Report"] == "Durable Goods (ex. transportation"]
-ex_transport = headline.reset_index().drop(columns = "index")
+ex_transport = durable_goods_orders[durable_goods_orders["report"] == "Durable Goods (ex. transportation)"]
+ex_transport = ex_transport.reset_index().drop(columns = "index")
 ex_transport["m/m"] = ex_transport["cell_value"].diff(periods = -1)
+ex_transport["rose/fell"] = np.where(ex_transport["cell_value"] == 0, "was unchanged", np.where(ex_transport["cell_value"] > 0, "rose", "fell"))
+ex_transport["vs_prior"] = np.where(ex_transport["m/m"] > 0, "up from", np.where(ex_transport["m/m"] == 0, "unchanged from", "down from"))
 
-core = durable_goods_orders[durable_goods_orders["Report"] == "Core durable goods orders (ex. defense and aircraft)"]
-core = headline.reset_index().drop(columns = "index")
+core = durable_goods_orders[durable_goods_orders["report"] == "Core durable goods orders (ex. defense and aircraft)"]
+core = core.reset_index().drop(columns = "index")
 core["m/m"] = core["cell_value"].diff(periods = -1)
+core["rose/fell"] = np.where(core["cell_value"] == 0, "was unchanged", np.where(core["cell_value"] > 0, "rose", "fell"))
+core["vs_prior"] = np.where(core["m/m"] > 0, "up from", np.where(core["m/m"] == 0, "unchanged from", "down from"))
 
-core_ship = durable_goods_orders[durable_goods_orders["Report"] == "Core capital goods shipments (which feeds into GDP"]
-core_ship = headline.reset_index().drop(columns = "index")
+core_ship = durable_goods_orders[durable_goods_orders["report"] == "Core capital goods shipments (which feeds into GDP"]
+core_ship = core_ship.reset_index().drop(columns = "index")
 core_ship["m/m"] = core_ship["cell_value"].diff(periods = -1)
+core_ship["rose/fell"] = np.where(core_ship["cell_value"] == 0, "was unchanged", np.where(core_ship["cell_value"] > 0, "rose", "fell"))
+core_ship["vs_prior"] = np.where(core_ship["m/m"] > 0, "up from", np.where(core_ship["m/m"] == 0, "unchanged from", "down from"))
 
-# TK - run tables and text outputs below through loop
-t = ["headline","ex_transport","core","core_ship"]
-t = list(zip(t, rpt_list))
+currentmonth = pd.merge((durable_goods_orders[durable_goods_orders["time"] == time]), df2, how = "left", left_on= "report", right_on = "report")
+currentmonth["vs_est"] = np.where(currentmonth["cell_value"] == currentmonth["estimate"], "in line with",
+                                  np.where(currentmonth["cell_value"] > currentmonth["estimate"], "beating", "missing"))
+# Add blank if cell equals NaN
+currentmonth
 
-"""# Tables"""
+# Print statements
 
-def print_statements():
-  if headline["m/m"][0] > 0:
-    print("{} {} rose {}pp m/m to {}%.".format(headline["month"][0], headline["Report"][0], headline["cell_value"][0]))
-  elif headline["m/m"][0] < 0:
-    print("{} {} fell {}pp m/m to {}%.".format(headline["month"][0], headline["Report"][0], headline["cell_value"][0]))
-  elif headline['m/m'][0] == 0:
-    print("{} {} was unchangedm/m at {}%.".format(headline["month"][0], headline["Report"][0], headline["cell_value"][0]))
+print("{} {} {} {}%, {} estimates for {}%, {} revised {} {}% (was {}%).".format(headline["month"][0],
+                            headline["report"][0],
+                            headline["rose/fell"][0],
+                            headline["cell_value"][0],
+                            currentmonth.set_index("report").loc["Headline durable goods orders"]["vs_est"],
+                            currentmonth.set_index("report").loc["Headline durable goods orders"]["estimate"],
+                            headline["vs_prior"][0],
+                            headline["month"][1],
+                            headline["cell_value"][1],
+                            currentmonth.set_index("report").loc["Headline durable goods orders"]["prior_unrevised"]))
 
-headline_vs_est = ()
-if headline["m/m"][0] > headline_est:
-  headline_vs_est = "beating"
-elif headline["m/m"][0] < headline_est:
-  headline_vs_est = "missing"
-elif headline["m/m"][0] == headline_est:
-  headline_vs_est = "in line with estimates"
+currentmonth.set_index("report").loc["Headline durable goods orders"]["vs_est"]
 
-vs_prior = ()
-if headline["cell_value"][0] > headline["cell_value"][1]:
-  vs_prior = "up from"
-if headline["cell_value"][0] > headline["cell_value"][1]:
-  vs_prior = "down from"
-if headline["cell_value"][0] == headline["cell_value"][1]:
-  vs_prior = "unchanged from"
+# Tables
 
-rose_fell = ()
-if headline["m/m"][0] > 0:
-  rose_fell = "rose"
-elif headline["m/m"][0] < 0:
-  rose_fell = "fell"
-elif headline["m/m"][0] == 0:
-  rose_fell = "was unchanged m/m at"
-
-if headline["m/m"][0] == 0:
-  print("{} {} {} {}%, {} estimates for {}% and {} {} {}% print.".format(headline["month"][0], headline["Report"][0], rose_fell, headline["m/m"][0], headline["cell_value"][0], headline_vs_est, headline_est, vs_prior, headline["month"][1], headline["cell_value"][1]))
-else:
-  print("{} {} {} {}pp m/m to {}%, {} estimates for {}% and {} {} {}% print.".format(headline["month"][0], headline["Report"][0], rose_fell, headline["m/m"][0], headline["cell_value"][0], headline_vs_est, headline_est, vs_prior, headline["month"][1], headline["cell_value"][1]))
+headline
 
 ex_transport
 
