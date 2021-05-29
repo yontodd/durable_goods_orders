@@ -18,4 +18,4 @@ Other available Census Bureau timeseries (https://api.census.gov/data/timeseries
 
 To-dos:
 * Print statement for Orders ex-transports
-* Add revisions to prior month's data
+* See if there's a way to pull the unrevised prior month's data - when the data are refreshed from the API, it overwrites previous unrevised data (solution for now is to manually enter prior month's data)
